@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vidarbha Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <div id="map" style="width: 100%; height: 600px;"></div>
+    <script>
+        var districts = []; // Initialize empty array for districts data
+
+        // Initialize the map
+        var map = L.map('map').setView([20.5, 79.5], 8);
+
+        // Add a tile layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to add markers
+        function addMarkers() {
+            districts.forEach(function(district) {
+                L.marker([district.Latitude, district.Longitude]).addTo(map)
+                    .bindPopup(district.Name + ": " + district.Temperature + "°C");
+            });
+        }
+
+        // Fetch data and add markers
+        fetch('http://127.0.0.1:5000/data')  // Update this endpoint based on your Flask route
+            .then(response => response.json())
+            .then(data => {
+                districts = data; // Assign fetched data to districts array
+                addMarkers(); // Call function to add markers to the map
+            });
+
+        // Add click event to interpolate temperature
+        function onMapClick(e) {
+            var lat = e.latlng.lat;
+            var lon = e.latlng.lng;
+
+            fetch(`http://127.0.0.1:5000/interpolate?lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        L.popup()
+                            .setLatLng(e.latlng)
+                            .setContent('Interpolated Temperature: ' + data.temp.toFixed(2) + '°C')
+                            .openOn(map);
+                    }
+                });
+        }
+
+        map.on('click', onMapClick);
+    </script>
+</body>
+
+</html>
